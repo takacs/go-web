@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"os"
 	"sync"
 
@@ -65,6 +66,12 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	if err != nil {
 		return User{}, err
 	}
+
+	if dbStructure.userExists(email) {
+		log.Printf("User exists")
+		return User{}, errors.New("User with that email already exists.")
+	}
+
 	hashed_password, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return User{}, err
@@ -84,6 +91,15 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	}
 
 	return user, nil
+}
+
+func (db *DBStructure) userExists(email string) bool {
+	for _, user := range db.Users {
+		if user.Email == email {
+			return true
+		}
+	}
+	return false
 }
 
 func (db *DB) GetChirps() ([]Chirp, error) {
@@ -160,4 +176,21 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 		return err
 	}
 	return nil
+}
+
+func (db *DB) AuthorizeUser(email, password string) (int, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return 0, err
+	}
+	for _, user := range dbStructure.Users {
+		if user.Email == email {
+			err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+			if err == nil {
+				return user.ID, nil
+			}
+			return 0, errors.New("Password invalid.")
+		}
+	}
+	return 0, errors.New("User not found.")
 }
