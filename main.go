@@ -3,19 +3,24 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 	"github.com/takacs/go-web/internal/database"
 )
 
 type apiConfig struct {
 	fileserverHits int
+	jwt            string
 	DB             *database.DB
 }
 
 func main() {
 	const filepathRoot = "."
 	const port = "8080"
+
+	godotenv.Load()
 
 	db, err := database.NewDB("database.json")
 	if err != nil {
@@ -24,6 +29,7 @@ func main() {
 
 	apiCfg := apiConfig{
 		fileserverHits: 0,
+		jwt:            os.Getenv("JWT_SECRET"),
 		DB:             db,
 	}
 
