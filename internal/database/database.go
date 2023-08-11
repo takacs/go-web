@@ -165,6 +165,9 @@ func (db *DB) loadDB() (DBStructure, error) {
 func (db *DB) writeDB(dbStructure DBStructure) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
+	for _, user := range dbStructure.Users {
+		log.Print(user)
+	}
 
 	dat, err := json.Marshal(dbStructure)
 	if err != nil {
@@ -193,4 +196,25 @@ func (db *DB) AuthorizeUser(email, password string) (int, error) {
 		}
 	}
 	return 0, errors.New("User not found.")
+}
+
+func (db *DB) UpdateUser(id int, email, password string) (User, error) {
+	DBStructure, err := db.loadDB()
+	if err != nil {
+		return User{}, errors.New("Failed to load DB.")
+	}
+
+	user, exists := DBStructure.Users[id]
+	if exists {
+		user.Email = email
+		hashed_password, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+		if err != nil {
+			return User{}, err
+		}
+		user.Password = string(hashed_password)
+		DBStructure.Users[id] = user
+		db.writeDB(DBStructure)
+		return user, nil
+	}
+	return User{}, nil
 }
