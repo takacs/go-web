@@ -10,10 +10,16 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+const (
+	Access  string = "chirpy-access"
+	Refresh        = "chirpy-refresh"
+)
+
 type loginResponse struct {
-	ID    int    `json:"id"`
-	Email string `json:"email"`
-	Token string `json:"token"`
+	ID           int    `json:"id"`
+	Email        string `json:"email"`
+	Token        string `json:"token"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
@@ -36,25 +42,36 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
-	var eis int
-	if eis = params.EIS; params.EIS == 0 {
-		eis = 24 * 60 * 60
-	}
-	token, err := cfg.createJwt(id, eis)
+
+	token, err := cfg.createJwt(id, Access)
 	if err != nil {
 		log.Print(cfg.jwt)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	respondWithJSON(w, http.StatusOK, loginResponse{Email: params.Email, ID: id, Token: token})
+	refresh_token, err := cfg.createJwt(id, Refresh)
+	if err != nil {
+		log.Print(cfg.jwt)
+		respondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	respondWithJSON(w, http.StatusOK, loginResponse{
+		Email:        params.Email,
+		ID:           id,
+		Token:        token,
+		RefreshToken: refresh_token})
 }
 
-func (cfg *apiConfig) createJwt(id, eis int) (string, error) {
+func (cfg *apiConfig) createJwt(id int, issuer string) (string, error) {
 	idasstring := strconv.Itoa(id)
+	expires := time.Hour
+	if issuer == "chirpy-refresh" {
+		expires = time.Hour * time.Duration(time.Duration(24*60).Hours())
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
-		Issuer:    "chirpy",
+		Issuer:    issuer,
 		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Second * time.Duration(eis))),
+		ExpiresAt: jwt.NewNumericDate(time.Now().Add(expires)),
 		Subject:   idasstring,
 	})
 
