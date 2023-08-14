@@ -23,6 +23,8 @@ type loginResponse struct {
 }
 
 func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
+	logCall(r)
+
 	type parameters struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -55,7 +57,7 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	err  = cfg.DB.SaveRefreshToken(refresh_token)
+	err = cfg.DB.SaveRefreshToken(refresh_token)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error())
 	}

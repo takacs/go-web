@@ -3,10 +3,10 @@ package main
 import (
 	"net/http"
 	"strings"
-
 )
 
 func (cfg *apiConfig) handlerRevokeToken(w http.ResponseWriter, r *http.Request) {
+	logCall(r)
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		respondWithError(w, http.StatusBadRequest, "No auth header")

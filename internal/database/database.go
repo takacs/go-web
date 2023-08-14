@@ -3,7 +3,6 @@ package database
 import (
 	"encoding/json"
 	"errors"
-	"log"
 	"os"
 	"sync"
 	"time"
@@ -75,7 +74,6 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 	}
 
 	if dbStructure.userExists(email) {
-		log.Printf("User exists")
 		return User{}, errors.New("User with that email already exists.")
 	}
 
@@ -173,9 +171,6 @@ func (db *DB) loadDB() (DBStructure, error) {
 func (db *DB) writeDB(dbStructure DBStructure) error {
 	db.mu.Lock()
 	defer db.mu.Unlock()
-	for _, user := range dbStructure.Users {
-		log.Print(user)
-	}
 
 	dat, err := json.Marshal(dbStructure)
 	if err != nil {
@@ -224,7 +219,7 @@ func (db *DB) UpdateUser(id int, email, password string) (User, error) {
 		db.writeDB(dbStructure)
 		return user, nil
 	}
-	return User{}, nil
+	return User{}, errors.New("User not found")
 }
 
 func (db *DB) SaveRefreshToken(token string) error {

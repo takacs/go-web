@@ -13,6 +13,8 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) handlerChirpsCreate(w http.ResponseWriter, r *http.Request) {
+	logCall(r)
+	
 	type parameters struct {
 		Body string `json:"body"`
 	}

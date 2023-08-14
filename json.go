@@ -7,7 +7,7 @@ import (
 )
 
 func respondWithError(w http.ResponseWriter, code int, msg string) {
-	log.Print(msg)
+	log.Printf("Call failed with: %v", msg)
 	if code > 499 {
 		log.Printf("Responding with 5XX error: %s", msg)
 	}
@@ -20,6 +20,7 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
+	log.Printf("Successful call: %v", payload)
 	w.Header().Set("Content-Type", "application/json")
 	dat, err := json.Marshal(payload)
 	if err != nil {
@@ -29,4 +30,8 @@ func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	}
 	w.WriteHeader(code)
 	w.Write(dat)
+}
+
+func logCall(r *http.Request) {
+	log.Printf("Call %v %v received.", r.URL, r.Method)
 }

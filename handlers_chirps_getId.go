@@ -9,6 +9,8 @@ import (
 )
 
 func (cfg *apiConfig) handlerChirpsGetId(w http.ResponseWriter, r *http.Request) {
+	logCall(r)
+
 	chirpid, err := strconv.Atoi(chi.URLParam(r, "chirpID"))
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Invalid Chirp ID.")
