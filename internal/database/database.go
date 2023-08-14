@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -16,8 +17,9 @@ type DB struct {
 }
 
 type DBStructure struct {
-	Chirps map[int]Chirp `json:"chirps"`
-	Users  map[int]User  `json:"user"`
+	Chirps      map[int]Chirp         `json:"chirps"`
+	Users       map[int]User          `json:"user"`
+	Revocations map[string]Revocation `json"refresh_tokens"`
 }
 
 type Chirp struct {
@@ -29,6 +31,11 @@ type User struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type Revocation struct {
+	Token     string    `json:"token"`
+	RevokedAt time.Time `json:"revoked_at"`
 }
 
 func NewDB(path string) (*DB, error) {
@@ -131,8 +138,9 @@ func (db *DB) GetChirpById(id int) (Chirp, error) {
 
 func (db *DB) createDB() error {
 	dbStructure := DBStructure{
-		Chirps: map[int]Chirp{},
-		Users:  map[int]User{},
+		Chirps:      map[int]Chirp{},
+		Users:       map[int]User{},
+		Revocations: map[string]Revocation{},
 	}
 	return db.writeDB(dbStructure)
 }
@@ -199,12 +207,12 @@ func (db *DB) AuthorizeUser(email, password string) (int, error) {
 }
 
 func (db *DB) UpdateUser(id int, email, password string) (User, error) {
-	DBStructure, err := db.loadDB()
+	dbStructure, err := db.loadDB()
 	if err != nil {
 		return User{}, errors.New("Failed to load DB.")
 	}
 
-	user, exists := DBStructure.Users[id]
+	user, exists := dbStructure.Users[id]
 	if exists {
 		user.Email = email
 		hashed_password, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -212,9 +220,56 @@ func (db *DB) UpdateUser(id int, email, password string) (User, error) {
 			return User{}, err
 		}
 		user.Password = string(hashed_password)
-		DBStructure.Users[id] = user
-		db.writeDB(DBStructure)
+		dbStructure.Users[id] = user
+		db.writeDB(dbStructure)
 		return user, nil
 	}
 	return User{}, nil
+}
+
+func (db *DB) SaveRefreshToken(token string) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return errors.New("Failed to load DB.")
+	}
+	dbStructure.Revocations[token] = Revocation{Token: token, RevokedAt: time.Time{}}
+
+	err = db.writeDB(dbStructure)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (db *DB) IsRevoked(token string) (bool, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return false, errors.New("Failed to load DB.")
+	}
+
+	revocation, exists := dbStructure.Revocations[token]	
+	if !exists {
+		return false, errors.New("This token is not in the DB.")
+	}
+
+	if revocation.RevokedAt.IsZero() {
+		return true, nil
+	} 
+
+	return false, nil
+}
+
+func (db *DB) RevokeToken(token string) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return errors.New("Failed to load DB.")
+	}
+	
+	revocation, exists := dbStructure.Revocations[token]
+	if exists {
+		revocation.RevokedAt = time.Now()
+		db.writeDB(dbStructure)
+	}
+	return nil
 }

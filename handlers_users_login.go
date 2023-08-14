@@ -55,6 +55,10 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	err  = cfg.DB.SaveRefreshToken(refresh_token)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
 	respondWithJSON(w, http.StatusOK, loginResponse{
 		Email:        params.Email,
 		ID:           id,
