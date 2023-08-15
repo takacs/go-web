@@ -20,8 +20,8 @@ func respondWithError(w http.ResponseWriter, code int, msg string) {
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
-	log.Printf("Successful call: %v", payload)
 	w.Header().Set("Content-Type", "application/json")
+	log.Print(code)
 	dat, err := json.Marshal(payload)
 	if err != nil {
 		log.Printf("Error marshalling JSON: %s", err)

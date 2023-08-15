@@ -72,7 +72,7 @@ func (cfg *apiConfig) createJwt(id int, issuer string) (string, error) {
 	idasstring := strconv.Itoa(id)
 	expires := time.Hour
 	if issuer == "chirpy-refresh" {
-		expires = time.Hour * time.Duration(time.Duration(24*60).Hours())
+		expires = 60 * 24 * time.Hour
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
 		Issuer:    issuer,

@@ -18,7 +18,7 @@ type DB struct {
 type DBStructure struct {
 	Chirps      map[int]Chirp         `json:"chirps"`
 	Users       map[int]User          `json:"user"`
-	Revocations map[string]Revocation `json"refresh_tokens"`
+	Revocations map[string]Revocation `json:"refresh_tokens"`
 }
 
 type Chirp struct {
@@ -264,7 +264,13 @@ func (db *DB) RevokeToken(token string) error {
 	revocation, exists := dbStructure.Revocations[token]
 	if exists {
 		revocation.RevokedAt = time.Now()
+		dbStructure.Revocations[token] = revocation
 		db.writeDB(dbStructure)
+	}
+
+	dbStructure, err = db.loadDB()
+	if err != nil {
+		return errors.New("Failed to load DB.")
 	}
 	return nil
 }

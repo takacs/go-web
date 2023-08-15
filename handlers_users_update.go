@@ -13,13 +13,12 @@ import (
 
 type updateResponse struct {
 	ID    int    `json:"id"`
-	Email string `json:"emai"`
+	Email string `json:"email"`
 }
 
 func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request) {
 	logCall(r)
 	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	log.Printf("Tokenstring: %v", tokenString)
 
 	claimsStruct := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(
@@ -28,38 +27,38 @@ func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 		func(token *jwt.Token) (interface{}, error) { return []byte(cfg.jwt), nil },
 	)
 	if err != nil {
-		log.Printf("Failed while parsing")
+		log.Printf(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	issuer, err := token.Claims.GetIssuer()
 	if err != nil {
-		log.Printf("Failed while getting issuer")
+		log.Printf(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	if issuer == Refresh {
-		respondWithError(w, http.StatusBadRequest, "Issuer is Refresh.")
+		respondWithError(w, http.StatusUnauthorized, "Issuer is Refresh.")
 		return
 	}
 
 	userIDString, err := token.Claims.GetSubject()
 	if err != nil {
-		log.Printf("Failed while getting user ID")
+		log.Printf(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	expiresAt, err := token.Claims.GetExpirationTime()
 	if err != nil {
-		log.Printf("Failed while getting expiration time")
+		log.Printf(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	if expiresAt.Before(time.Now().UTC()) {
-		log.Printf("Failed because token expired")
+		log.Printf(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -82,6 +81,5 @@ func (cfg *apiConfig) handlerUsersUpdate(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Update Failed")
 	}
-	log.Print("Updated user")
 	respondWithJSON(w, http.StatusOK, updateResponse{ID: id, Email: user.Email})
 }

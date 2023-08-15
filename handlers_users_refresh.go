@@ -4,19 +4,19 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"strconv"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type refreshResponse struct {
-	RefreshToken string
+	RefreshToken string `json:"token"`
 }
 
 func (cfg *apiConfig) handlerTokenRefresh(w http.ResponseWriter, r *http.Request) {
 	logCall(r)
 
 	tokenString := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	log.Printf("Tokenstring: %v", tokenString)
 
 	claimsStruct := jwt.RegisteredClaims{}
 	token, err := jwt.ParseWithClaims(
@@ -26,14 +26,14 @@ func (cfg *apiConfig) handlerTokenRefresh(w http.ResponseWriter, r *http.Request
 	)
 
 	if err != nil {
-		log.Print("Failed while parsing")
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 
 	issuer, err := token.Claims.GetIssuer()
 	if err != nil {
-		log.Print("Failed while getting issuer")
+		log.Print(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -44,11 +44,29 @@ func (cfg *apiConfig) handlerTokenRefresh(w http.ResponseWriter, r *http.Request
 	}
 
 	isvalid, err := cfg.DB.IsRevoked(tokenString)
-	if err != nil || !isvalid {
-		respondWithError(w, http.StatusBadRequest, err.Error())
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 
+	} else if !isvalid {
+		respondWithError(w, http.StatusUnauthorized, "Provided token not valid.")
+		return
 	}
 
-	respondWithJSON(w, http.StatusOK, refreshResponse{RefreshToken: tokenString})
+	id, err := token.Claims.GetSubject()
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
+
+	strid, err := strconv.Atoi(id)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+	}
+	refreshedAccess, err := cfg.createJwt(strid, Access)
+	if err != nil {
+		log.Print(cfg.jwt)
+		respondWithError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	respondWithJSON(w, http.StatusOK, refreshResponse{RefreshToken: refreshedAccess})
 }
