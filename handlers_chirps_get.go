@@ -19,6 +19,7 @@ func (cfg *apiConfig) handlerChirpsRetrieve(w http.ResponseWriter, r *http.Reque
 		chirps = append(chirps, Chirp{
 			ID:   dbChirp.ID,
 			Body: dbChirp.Body,
+			AuthorID: dbChirp.AuthorID,
 		})
 	}
 
