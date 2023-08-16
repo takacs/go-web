@@ -31,6 +31,7 @@ type User struct {
 	ID       int    `json:"id"`
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	IsChirpyRed bool `json:"is_chirpy_red"`
 }
 
 type Revocation struct {
@@ -89,6 +90,7 @@ func (db *DB) CreateUser(email string, password string) (User, error) {
 		ID:       id,
 		Email:    email,
 		Password: string(hashed_password),
+		IsChirpyRed: false,
 	}
 	dbStructure.Users[id] = user
 
@@ -186,21 +188,21 @@ func (db *DB) writeDB(dbStructure DBStructure) error {
 	return nil
 }
 
-func (db *DB) AuthorizeUser(email, password string) (int, error) {
+func (db *DB) AuthorizeUser(email, password string) (User, error) {
 	dbStructure, err := db.loadDB()
 	if err != nil {
-		return 0, err
+		return User{}, err
 	}
 	for _, user := range dbStructure.Users {
 		if user.Email == email {
 			err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 			if err == nil {
-				return user.ID, nil
+				return user, nil
 			}
-			return 0, errors.New("Password invalid.")
+			return User{}, errors.New("Password invalid.")
 		}
 	}
-	return 0, errors.New("User not found.")
+	return User{}, errors.New("User not found.")
 }
 
 func (db *DB) UpdateUser(id int, email, password string) (User, error) {
@@ -287,4 +289,21 @@ func (db *DB) DeleteChirp(chirpid int) error {
 	db.writeDB(dbStructure)
 
 	return nil
+}
+
+func (db *DB) UpgradeChirpyRed(user_id int) (int, error) {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return user_id, errors.New("Failed to load DB.")
+	}
+	
+	user, exists := dbStructure.Users[user_id]
+	if exists == false {
+		return user_id, errors.New("User doesn't exist")
+	}
+	
+	user.IsChirpyRed = true
+	dbStructure.Users[user_id] = user
+	db.writeDB(dbStructure)
+	return user_id, nil
 }

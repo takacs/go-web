@@ -20,6 +20,7 @@ type loginResponse struct {
 	Email        string `json:"email"`
 	Token        string `json:"token"`
 	RefreshToken string `json:"refresh_token"`
+	IsChirpyRed  bool   `json:"is_chirpy_red"`
 }
 
 func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) {
@@ -39,19 +40,19 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	id, err := cfg.DB.AuthorizeUser(params.Email, params.Password)
+	user, err := cfg.DB.AuthorizeUser(params.Email, params.Password)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, err.Error())
 		return
 	}
 
-	token, err := cfg.createJwt(id, Access)
+	token, err := cfg.createJwt(user.ID, Access)
 	if err != nil {
 		log.Print(cfg.jwt)
 		respondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	refresh_token, err := cfg.createJwt(id, Refresh)
+	refresh_token, err := cfg.createJwt(user.ID, Refresh)
 	if err != nil {
 		log.Print(cfg.jwt)
 		respondWithError(w, http.StatusBadRequest, err.Error())
@@ -63,9 +64,11 @@ func (cfg *apiConfig) handlerUsersLogin(w http.ResponseWriter, r *http.Request) 
 	}
 	respondWithJSON(w, http.StatusOK, loginResponse{
 		Email:        params.Email,
-		ID:           id,
+		ID:           user.ID,
 		Token:        token,
-		RefreshToken: refresh_token})
+		RefreshToken: refresh_token,
+		IsChirpyRed:  user.IsChirpyRed,
+	})
 }
 
 func (cfg *apiConfig) createJwt(id int, issuer string) (string, error) {
