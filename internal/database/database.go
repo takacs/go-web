@@ -276,3 +276,15 @@ func (db *DB) RevokeToken(token string) error {
 	}
 	return nil
 }
+
+func (db *DB) DeleteChirp(chirpid int) error {
+	dbStructure, err := db.loadDB()
+	if err != nil {
+		return errors.New("Failed to load DB.")
+	}
+	
+	delete(dbStructure.Chirps, chirpid) 
+	db.writeDB(dbStructure)
+
+	return nil
+}
